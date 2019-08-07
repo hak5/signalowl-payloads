@@ -1,0 +1,13 @@
+# Title: Simple WiFi Connection Example
+# Author: Hak5Darren
+# Version: 1.0
+
+# WiFi Client Setup
+WIFI_SSID="network-name"
+WIFI_PASS="passphrase"
+
+LED SETUP
+WIFI_CONNECT
+# optionally start SSH server
+# /etc/init.d/sshd start
+LED ATTACK
