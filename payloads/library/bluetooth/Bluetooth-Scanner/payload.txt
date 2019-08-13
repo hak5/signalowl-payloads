@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+# Title: Bluetooth Scanner
+# Author: Brian Fair <blfair@gmail.com>, https://github.com/b1fair
+# Version: 1.0
+#
+# Description: Scans for bluetooth devices, optionally interrogates them (hcitool info), tested with Hak5 "Mini USB Bluetooth Adapter (Qualcomm CSR8510 chipset)"
+#
+# LED SETUP: Scanning
+# LED ATTACK: Querying devices
+#
+
+LOOT_DIR=/root/loot/bluetooth_scan
+BT_OUTFILE=`date +%s`.bt.list     # File (in LOOT_DIR) to write list of observed MACs to 
+BT_INFOFILE=`date +%s`.bt.info    # File (in LOOT_DIR) to write results of "hcitool info <MAC>" to (if enabled)
+BTDEV=hci0              # Set to the device to use for scanning (probably hci0)
+DEBUG=0                 # Set to 1 to enable verbose logging.
+INTERROGATE=1       	# Set to 1 to enable running "hcitool info <MAC>" on observed bluetooth MACs, 0 to disable this.
+
+function scan_bluetooth() {
+	LED SETUP
+	[[ $DEBUG == 1 ]] && echo ... Scanning for bluetooth devices... | tee -a /tmp/payload.log
+	hcitool scan |egrep -v "^Scanning" > /tmp/bluetooth_scan
+	total_bts=$(cat /tmp/bluetooth_scan | wc -l)
+	[[ $DEBUG == 1 ]] && echo ... Found "$total_bts" bluetooth devices | tee -a /tmp/payload.log
+	for check_bt_mac in `cat /tmp/bluetooth_scan |awk '{print $1}'`
+	do
+		grep -i -q $check_bt_mac $LOOT_DIR/$BT_OUTFILE
+		if [ $? == 0 ]
+		then
+			[[ $DEBUG == 1 ]] && echo --- "$check_bt_mac": Already seen, not logging. | tee -a /tmp/payload.log
+		else
+			[[ $DEBUG == 1 ]] && echo +++ "$check_bt_mac": New MAC, logging... | tee -a /tmp/payload.log
+			echo -e "`date`\t`grep -i $check_bt_mac /tmp/bluetooth_scan`" >>$LOOT_DIR/$BT_OUTFILE
+		fi
+	done
+
+}
+
+function interrogate_bluetooth() {
+	LED ATTACK
+	current_bt=$(sed -n "$on"p /tmp/bluetooth_scan | awk '{print $2}')
+	current_bt_mac=$(sed -n "$on"p /tmp/bluetooth_scan | awk '{print $1}')
+	if grep -i -q "$current_bt_mac" /tmp/bt_scanned; then
+		[[ $DEBUG == 1 ]] && echo --- "$current_bt_mac": Already interrogated, skipping.  | tee -a /tmp/payload.log
+	else
+		bluetooth_info
+	fi
+}
+
+function bluetooth_info() {
+	[[ $DEBUG == 1 ]] && echo +++ "$current_bt_mac": Not yet scanned, scanning...  | tee -a /tmp/payload.log
+	echo "Begin $current_bt_mac ----------------------" >>$LOOT_DIR/$BT_INFOFILE 
+	hcitool info $current_bt_mac >>$LOOT_DIR/$BT_INFOFILE
+	echo $current_bt_mac >> /tmp/bt_scanned
+}
+
+function run() {
+	runonce
+	while true; do
+		setup
+		scan_bluetooth
+		if [ "$INTERROGATE" -eq 1 ]
+		then
+			while [ "$on" -le "$total_bts" ]
+			do
+				if [ "$on" -ge 1 ]; then interrogate_bluetooth; fi
+				let on=on+1
+			done
+		else
+			[[ $DEBUG == 1 ]] && echo ... Interrogate mode is not enabled, skipping scans. | tee -a /tmp/payload.log
+		fi
+		sleep 5
+		[[ $DEBUG == 1 ]] && echo ... Completed recon. Restarting... | tee -a /tmp/payload.log
+	done
+}
+
+function runonce() {
+	hciconfig $BTDEV up
+	[[ $DEBUG == 1 ]] && echo "-----------------------------------------" | tee -a /tmp/payload.log
+	[[ $DEBUG == 1 ]] && echo Our local bluetooth device info: | tee -a /tmp/payload.log
+	[[ $DEBUG == 1 ]] && hciconfig | tee -a /tmp/payload.log
+	[[ $DEBUG == 1 ]] && echo "-----------------------------------------" | tee -a /tmp/payload.log
+	> /tmp/bluetooth_scan
+	> /tmp/bt_scanned
+	mkdir -p $LOOT_DIR
+	touch $LOOT_DIR/$BT_OUTFILE
+	touch $LOOT_DIR/$BT_INFOFILE
+	echo -e "`date`\tStartup" >>$LOOT_DIR/$BT_OUTFILE
+}
+
+function setup() {
+	on=0
+}
+
+# Run payload
+
+run
+
