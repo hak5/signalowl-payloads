@@ -1,4 +1,4 @@
-# A simple bluetooth scanner
+# A basic bluetooth scanner
 
 Scans for bluetooth devices, and optionally interrogates them (using hcitool info).
 
