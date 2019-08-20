@@ -1,3 +1,4 @@
+#!/bin/bash
 # Title: Garbage SSID Spammer
 # Description: Uses mdk4 to beacon non-printable SSIDs and SSIDs that break the 32-byte limit
 # Author: Hak5Darren
