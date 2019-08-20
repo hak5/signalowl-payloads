@@ -1,3 +1,4 @@
+#!/bin/bash
 # Title: Simple WiFi Connection Example
 # Author: Hak5Darren
 # Version: 1.0
