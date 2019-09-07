@@ -5,8 +5,7 @@
 # Author: Hak5Darren
 
 function WIFI_CONNECT() {
-    logger running extension: wifi_connect
-    ifconfig wlan0 up;sleep 2
+    ifconfig wlan0 up;sleep 10
     echo -e "network={\nssid=\"$WIFI_SSID\"\npsk=\"$WIFI_PASS\"\npriority=1\n}">/tmp/wpa.conf
     wpa_supplicant -B -Dnl80211 -i wlan0 -c /tmp/wpa.conf
     while(iwconfig wlan0 | grep Not-Associated); do sleep 1; done
