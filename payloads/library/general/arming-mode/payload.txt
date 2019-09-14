@@ -1,0 +1,36 @@
+#!/bin/bash
+# Title: Arming Mode
+# Author: Hak5
+# Version: 1.0
+
+function check_version() {
+    VERSION=$(cat /etc/owl/VERSION)
+    [[ $VERSION = "1.0.0" ]] || {
+        echo "ERROR: Requires firmware version 1.0.0." > /dev/console
+        return 1
+    }
+}
+
+function configure_network() {
+    uci set wireless.radio0.disabled='0'
+    uci commit wireless
+
+    /etc/init.d/network restart
+}
+
+function start_ssh() {
+    /etc/init.d/sshd start
+}
+
+function run() {
+    check_version && {
+        echo "ARMING" > /tmp/MODE
+
+        configure_network
+        start_ssh
+
+        LED R DOUBLE
+    }
+}
+
+run &> /dev/null
